@@ -1,11 +1,11 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import Dashboard from './components/Dashboard';
 import IngredientManager from './components/IngredientManager';
 import RecipeManager from './components/RecipeManager';
+import MarketingGenerator from './components/MarketingGenerator';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { Ingredient, Recipe, ViewState, CostBreakdown, Unit } from './types';
-import { LayoutDashboard, ShoppingBasket, ChefHat, Settings, Download } from 'lucide-react';
+import { LayoutDashboard, ShoppingBasket, ChefHat, Settings, Download, Megaphone } from 'lucide-react';
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<ViewState>('dashboard');
@@ -15,16 +15,11 @@ const App: React.FC = () => {
   // -- PWA Install Logic --
   useEffect(() => {
     const handler = (e: any) => {
-      // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
-      // Stash the event so it can be triggered later.
       setDeferredPrompt(e);
-      // Update UI notify the user they can install the PWA
       setShowInstallBtn(true);
     };
-
     window.addEventListener('beforeinstallprompt', handler);
-
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
     };
@@ -32,9 +27,7 @@ const App: React.FC = () => {
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
-    // Show the install prompt
     deferredPrompt.prompt();
-    // Wait for the user to respond to the prompt
     const { outcome } = await deferredPrompt.userChoice;
     console.log(`User response to the install prompt: ${outcome}`);
     setDeferredPrompt(null);
@@ -42,7 +35,6 @@ const App: React.FC = () => {
   };
   
   // -- State Management --
-  // Initialize with some dummy data if empty (Updated for IDR prices and new Categories)
   const [ingredients, setIngredients] = useLocalStorage<Ingredient[]>('forketta_ingredients', [
     { id: '1', name: 'All-Purpose Flour', category: 'Flours', purchaseUnit: Unit.KILOGRAM, purchaseCost: 18000, purchaseQuantity: 1, costPerBaseUnit: 18 },
     { id: '2', name: 'Eggs (Large Tray)', category: 'Dairy', purchaseUnit: Unit.PIECE, purchaseCost: 65000, purchaseQuantity: 30, costPerBaseUnit: 2166.67 },
@@ -69,7 +61,6 @@ const App: React.FC = () => {
   };
 
   const handleDeleteIngredient = (id: string) => {
-    // Check if used in recipes
     const isUsed = recipes.some(r => r.ingredients.some(ri => ri.ingredientId === id));
     if (isUsed) {
       alert("Cannot delete ingredient because it is used in a recipe.");
@@ -93,30 +84,19 @@ const App: React.FC = () => {
     }
   };
 
-  // Cost Calculation Engine
   const calculateRecipeCost = useCallback((recipe: Recipe): CostBreakdown => {
     let totalIngredientCost = 0;
 
     recipe.ingredients.forEach(item => {
       const ing = ingredients.find(i => i.id === item.ingredientId);
       if (ing) {
-        // Simplified: assuming item.quantity is already in base units (e.g., grams) matching costPerBaseUnit
-        // Real-world needs a Unit Conversion Utility here.
         totalIngredientCost += (item.quantity * ing.costPerBaseUnit);
       }
     });
 
-    // Add Overhead %
     const overheadCost = totalIngredientCost * (recipe.overheadPercentage / 100);
-    
-    // Total Cost
     const totalCost = totalIngredientCost + recipe.laborCost + overheadCost;
-    
-    // Per Serving
     const costPerServing = recipe.servings > 0 ? totalCost / recipe.servings : 0;
-
-    // Suggested Price based on Target Food Cost %
-    // Formula: Price = IngredientCost / (TargetPercentage / 100)
     
     const ingredientCostPerServing = recipe.servings > 0 ? totalIngredientCost / recipe.servings : 0;
     const targetDecimal = recipe.targetFoodCostPercentage / 100;
@@ -132,9 +112,6 @@ const App: React.FC = () => {
     };
   }, [ingredients]);
 
-  // -- Render --
-
-  // Checkered Tablecloth Pattern (Gingham)
   const checkeredStyle = {
     backgroundColor: 'white',
     backgroundImage: `
@@ -202,6 +179,17 @@ const App: React.FC = () => {
               <ChefHat size={20} className="mr-3" /> 
               <span className="font-medium">Recipes</span>
             </button>
+            <button 
+              onClick={() => setActiveView('marketing')}
+              className={`w-full flex items-center px-4 py-3 rounded-lg transition-all shadow-sm ${
+                activeView === 'marketing' 
+                  ? 'bg-pink-600 text-white shadow-pink-200' 
+                  : 'bg-white/90 text-slate-700 hover:bg-white hover:text-pink-600'
+              }`}
+            >
+              <Megaphone size={20} className="mr-3" /> 
+              <span className="font-medium">Marketing</span>
+            </button>
           </div>
         </div>
 
@@ -218,7 +206,7 @@ const App: React.FC = () => {
 
            <div className="flex items-center justify-center text-slate-700 text-xs bg-white/80 backdrop-blur rounded-full py-2 shadow-sm border border-red-100">
              <Settings size={14} className="mr-2" />
-             <span className="font-medium">v1.1.0</span>
+             <span className="font-medium">v1.2.0</span>
            </div>
         </div>
       </nav>
@@ -230,7 +218,8 @@ const App: React.FC = () => {
             {activeView === 'dashboard' && <LayoutDashboard className="mr-2 text-red-500" />}
             {activeView === 'ingredients' && <ShoppingBasket className="mr-2 text-red-500" />}
             {(activeView === 'recipes' || activeView === 'recipe-builder') && <ChefHat className="mr-2 text-red-500" />}
-            {activeView}
+            {activeView === 'marketing' && <Megaphone className="mr-2 text-pink-500" />}
+            {activeView === 'recipe-builder' ? 'Recipe Builder' : activeView}
           </h2>
           <div className="text-sm font-medium bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm text-slate-600">
              {ingredients.length} Ingredients <span className="mx-2 text-slate-300">|</span> {recipes.length} Recipes
@@ -259,6 +248,10 @@ const App: React.FC = () => {
             onDeleteRecipe={handleDeleteRecipe}
             getCostBreakdown={calculateRecipeCost}
           />
+        )}
+
+        {activeView === 'marketing' && (
+          <MarketingGenerator recipes={recipes} ingredients={ingredients} />
         )}
       </main>
     </div>

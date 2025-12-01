@@ -65,4 +65,4 @@ export interface CostBreakdown {
   currentMargin?: number;
 }
 
-export type ViewState = 'dashboard' | 'ingredients' | 'recipes' | 'recipe-builder';
+export type ViewState = 'dashboard' | 'ingredients' | 'recipes' | 'recipe-builder' | 'marketing';

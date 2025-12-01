@@ -1,7 +1,8 @@
+
 import React, { useState, useMemo } from 'react';
 import { Recipe, Ingredient, Unit, RecipeIngredient, CostBreakdown } from '../types';
 import { generateRecipeDraft, analyzeProfitability } from '../services/gemini';
-import { Trash2, Plus, ArrowLeft, Save, Sparkles, ChefHat, Info } from 'lucide-react';
+import { Trash2, Plus, ArrowLeft, Save, Sparkles, ChefHat, Info, Mail, Send } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
 interface RecipeManagerProps {
@@ -132,6 +133,47 @@ const RecipeManager: React.FC<RecipeManagerProps> = ({
     if (!activeRecipe) return null;
     return getCostBreakdown(activeRecipe);
   }, [activeRecipe, getCostBreakdown]);
+
+  const handleSendToOffice = () => {
+    if (!activeRecipe || !currentCost) return;
+
+    const ingredientListText = activeRecipe.ingredients.map(ri => {
+      const ingData = ingredients.find(i => i.id === ri.ingredientId);
+      return `- ${ingData?.name || 'Unknown'}: ${ri.quantity} ${ri.unit}`;
+    }).join('\n');
+
+    const emailBody = `
+RECIPE SUBMISSION: ${activeRecipe.name.toUpperCase()}
+----------------------------------------
+Description: ${activeRecipe.description || 'N/A'}
+Servings: ${activeRecipe.servings}
+
+INGREDIENTS:
+${ingredientListText}
+
+INSTRUCTIONS:
+${activeRecipe.instructions || 'No instructions provided.'}
+
+----------------------------------------
+COSTING BREAKDOWN (IDR):
+Total Ingredient Cost: Rp ${currentCost.totalIngredientCost.toLocaleString('id-ID')}
+Labor Cost: Rp ${currentCost.laborCost.toLocaleString('id-ID')}
+Overhead (${activeRecipe.overheadPercentage}%): Rp ${currentCost.overheadCost.toLocaleString('id-ID')}
+
+TOTAL RECIPE COST: Rp ${currentCost.totalCost.toLocaleString('id-ID')}
+COST PER SERVING: Rp ${currentCost.costPerServing.toLocaleString('id-ID')}
+
+SUGGESTED SELLING PRICE: Rp ${currentCost.suggestedPrice.toLocaleString('id-ID')}
+(Based on ${activeRecipe.targetFoodCostPercentage}% Food Cost Target)
+    `;
+
+    const subject = `New Recipe: ${activeRecipe.name} - Costing Approval`;
+    
+    // Create mailto link
+    const mailtoLink = `mailto:office@forkettabali.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+    
+    window.open(mailtoLink, '_blank');
+  };
 
   if (view === 'list') {
     return (
@@ -382,12 +424,21 @@ const RecipeManager: React.FC<RecipeManagerProps> = ({
               </div>
             </div>
 
-            <button 
-              onClick={() => { onSaveRecipe(activeRecipe); setView('list'); }}
-              className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-lg transition-colors flex justify-center items-center"
-            >
-              <Save size={18} className="mr-2" /> Save Recipe
-            </button>
+            <div className="space-y-3">
+              <button 
+                onClick={() => { onSaveRecipe(activeRecipe); setView('list'); }}
+                className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-lg transition-colors flex justify-center items-center"
+              >
+                <Save size={18} className="mr-2" /> Save Recipe
+              </button>
+
+              <button 
+                onClick={handleSendToOffice}
+                className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-lg transition-colors flex justify-center items-center border border-slate-600"
+              >
+                <Send size={18} className="mr-2" /> Send to Office
+              </button>
+            </div>
          </div>
 
          {/* AI Analysis */}

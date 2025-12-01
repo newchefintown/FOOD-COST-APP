@@ -3,7 +3,7 @@ import { Ingredient, Unit } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-// Using Flash for speed and efficiency in generating structured data
+// Using Flash for speed and efficiency
 const MODEL_NAME = "gemini-2.5-flash";
 
 export const generateRecipeDraft = async (recipeName: string, existingIngredients: Ingredient[]) => {
@@ -83,5 +83,34 @@ export const analyzeProfitability = async (recipeName: string, cost: number, pri
   } catch (error) {
     console.error("Gemini Analysis Error:", error);
     return "Could not generate analysis at this time.";
+  }
+};
+
+export const generateMarketingPost = async (recipeName: string, description: string, ingredients: string[]) => {
+  try {
+    const ingredientsList = ingredients.join(", ");
+    const prompt = `
+      Write a captivating Social Media Post (Instagram/Facebook) in English for a restaurant dish named "${recipeName}".
+      
+      Dish Description: ${description}
+      Key Ingredients: ${ingredientsList}
+      
+      Requirements:
+      - Tone: Exciting, delicious, trendy, and inviting.
+      - Structure: Catchy hook first, then appetizing details, then a call to action (Visit us!).
+      - Include 5-10 relevant hashtags.
+      - Use emojis liberally to make it visually appealing.
+      - Language: English.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: MODEL_NAME,
+      contents: prompt,
+    });
+
+    return response.text;
+  } catch (error) {
+    console.error("Gemini Marketing Error:", error);
+    return "Enjoy our delicious new dish! Visit us to taste it. #Foodie #Restaurant";
   }
 };
